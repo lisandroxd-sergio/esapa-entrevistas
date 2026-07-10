@@ -71,7 +71,7 @@ function doGet(e) {
 5. Implementar → **Copiá la URL**
 
 ### 1.4 Pegar URL en el código
-Abrí `js/app.js`, buscá esta línea y reemplazá:
+Abrí `JS/app.js`, buscá esta línea y reemplazá:
 ```
 GOOGLE_SCRIPT_URL: "https://script.google.com/macros/s/TU_URL_AQUI/exec",
 ```
@@ -123,7 +123,7 @@ Al tocar "Contactar por WhatsApp":
 ---
 
 ## Personalizar el mensaje de WhatsApp
-En `js/app.js`, editá `WSP_MENSAJE`. Variables disponibles:
+En `JS/app.js`, editá `WSP_MENSAJE`. Variables disponibles:
 - `{nombre}` → nombre del candidato
 - `{curso}` → curso elegido
 - `{horario}` → horario preferido
