@@ -112,7 +112,11 @@
         <div class="field-row">
           <div class="field-group">
             <label class="label" for="ocupacion">Ocupación <span class="required">*</span></label>
-            <input class="input" type="text" id="ocupacion" placeholder="Ej: Empleado, Estudiante..." />
+            <div class="custom-select">
+              <input class="input" type="text" id="ocupacion" placeholder="Escribí o elegí una ocupación" autocomplete="off" aria-autocomplete="list" aria-expanded="false" />
+              <button class="custom-select-toggle" type="button" id="ocupacion-toggle" aria-label="Abrir lista de ocupaciones">▾</button>
+              <ul class="custom-select-options hidden" id="ocupacion-options"></ul>
+            </div>
             <span class="field-error" id="err-ocupacion"></span>
           </div>
 
@@ -132,7 +136,11 @@
 
           <div class="field-group">
             <label class="label" for="asesor">Asesor <span class="required">*</span></label>
-            <input class="input" type="text" id="asesor" placeholder="Nombre del asesor" />
+            <div class="custom-select">
+              <input class="input" type="text" id="asesor" placeholder="Elegí un asesor" autocomplete="off" aria-autocomplete="list" aria-expanded="false" />
+              <button class="custom-select-toggle" type="button" id="asesor-toggle" aria-label="Abrir lista de asesores">▾</button>
+              <ul class="custom-select-options hidden" id="asesor-options"></ul>
+            </div>
             <span class="field-error" id="err-asesor"></span>
           </div>
         </div>
@@ -190,17 +198,12 @@
           </div>
         </div>
 
-        <!-- Horario cita + Asistente -->
+        <!-- Horario cita -->
         <div class="field-row">
           <div class="field-group">
             <label class="label" for="cita-horario">Horario de la cita <span class="required">*</span></label>
             <input class="input" type="time" id="cita-horario" />
             <span class="field-error" id="err-cita-horario"></span>
-          </div>
-          <div class="field-group">
-            <label class="label" for="cita-asistente">Asistente <span class="required">*</span></label>
-            <input class="input" type="text" id="cita-asistente" placeholder="Ej: Martina" />
-            <span class="field-error" id="err-cita-asistente"></span>
           </div>
         </div>
 

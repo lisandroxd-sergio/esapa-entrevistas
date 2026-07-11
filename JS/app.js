@@ -58,7 +58,18 @@ const CURSOS_INTERES = [
 const cursoInput = $("curso");
 const cursoToggle = $("curso-toggle");
 const cursoOptions = $("curso-options");
+const ocupacionInput = $("ocupacion");
+const ocupacionToggle = $("ocupacion-toggle");
+const ocupacionOptions = $("ocupacion-options");
+const asesorInput = $("asesor");
+const asesorToggle = $("asesor-toggle");
+const asesorOptions = $("asesor-options");
 let cursoOpen = false;
+let ocupacionOpen = false;
+let asesorOpen = false;
+
+const ASESOR_OPTIONS = ["Martina", "Valeria"];
+const OCUPACIONES = ["Empleado", "Estudiante", "Desempleado", "Independiente", "Freelance", "Otro"];
 
 function actualizarGrupoOtro() {
   const grupoOtro = $("grupo-otro");
@@ -67,25 +78,30 @@ function actualizarGrupoOtro() {
   }
 }
 
-function renderCursos(filter = "") {
+function renderSelectOptions(items, filter) {
   const query = filter.trim().toLowerCase();
-  const filtrados = CURSOS_INTERES.filter(curso => curso.toLowerCase().includes(query));
+  const filtrados = items.filter(item => item.toLowerCase().includes(query));
 
   if (filtrados.length === 0) {
-    cursoOptions.innerHTML = '<li class="custom-select-option">No se encontraron cursos</li>';
-  } else {
-    cursoOptions.innerHTML = filtrados.map(curso => `
-      <li class="custom-select-option" data-curso="${curso}">${curso}</li>
-    `).join("");
+    return '<li class="custom-select-option">No se encontraron opciones</li>';
   }
 
-  cursoOptions.classList.toggle("hidden", !cursoOpen || filtrados.length === 0);
-  cursoToggle.setAttribute("aria-expanded", String(cursoOpen));
+  return filtrados.map(item => `
+      <li class="custom-select-option" data-value="${item}">${item}</li>
+    `).join("");
+}
+
+function cerrarTodosLosSelects() {
+  if (cursoOpen) cerrarListaCursos();
+  if (ocupacionOpen) cerrarListaOcupacion();
+  if (asesorOpen) cerrarListaAsesor();
 }
 
 function abrirListaCursos() {
   cursoOpen = true;
-  renderCursos(cursoInput.value);
+  cursoOptions.innerHTML = renderSelectOptions(CURSOS_INTERES, cursoInput.value);
+  cursoOptions.classList.toggle("hidden", cursoOptions.children.length === 0);
+  cursoToggle.setAttribute("aria-expanded", String(cursoOpen));
 }
 
 function cerrarListaCursos() {
@@ -100,33 +116,67 @@ function seleccionarCurso(curso) {
   cerrarListaCursos();
 }
 
-function inicializarCursos() {
+function abrirListaOcupacion() {
+  ocupacionOpen = true;
+  ocupacionOptions.innerHTML = renderSelectOptions(OCUPACIONES, ocupacionInput.value);
+  ocupacionOptions.classList.toggle("hidden", ocupacionOptions.children.length === 0);
+  ocupacionToggle.setAttribute("aria-expanded", String(ocupacionOpen));
+}
+
+function cerrarListaOcupacion() {
+  ocupacionOpen = false;
+  ocupacionOptions.classList.add("hidden");
+  ocupacionToggle.setAttribute("aria-expanded", "false");
+}
+
+function seleccionarOcupacion(ocupacion) {
+  ocupacionInput.value = ocupacion;
+  cerrarListaOcupacion();
+}
+
+function abrirListaAsesor() {
+  asesorOpen = true;
+  asesorOptions.innerHTML = renderSelectOptions(ASESOR_OPTIONS, asesorInput.value);
+  asesorOptions.classList.toggle("hidden", asesorOptions.children.length === 0);
+  asesorToggle.setAttribute("aria-expanded", String(asesorOpen));
+}
+
+function cerrarListaAsesor() {
+  asesorOpen = false;
+  asesorOptions.classList.add("hidden");
+  asesorToggle.setAttribute("aria-expanded", "false");
+}
+
+function seleccionarAsesor(asesor) {
+  asesorInput.value = asesor;
+  cerrarListaAsesor();
+}
+
+function inicializarSelects() {
   renderCursos("");
   cerrarListaCursos();
+  cerrarListaOcupacion();
+  cerrarListaAsesor();
   actualizarGrupoOtro();
 
   cursoInput.addEventListener("focus", () => abrirListaCursos());
   cursoInput.addEventListener("input", () => {
     abrirListaCursos();
-    renderCursos(cursoInput.value);
     actualizarGrupoOtro();
   });
-
   cursoInput.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       cerrarListaCursos();
       return;
     }
-
     if (event.key === "Enter" && cursoOpen) {
       event.preventDefault();
       const primerOpcion = cursoOptions.querySelector(".custom-select-option");
       if (primerOpcion && !primerOpcion.textContent.includes("No se encontraron")) {
-        seleccionarCurso(primerOpcion.dataset.curso);
+        seleccionarCurso(primerOpcion.dataset.value);
       }
     }
   });
-
   cursoToggle.addEventListener("click", (event) => {
     event.preventDefault();
     if (cursoOpen) {
@@ -135,16 +185,73 @@ function inicializarCursos() {
       abrirListaCursos();
     }
   });
-
   cursoOptions.addEventListener("click", (event) => {
     const opcion = event.target.closest(".custom-select-option");
     if (!opcion) return;
-    seleccionarCurso(opcion.dataset.curso);
+    seleccionarCurso(opcion.dataset.value);
+  });
+
+  ocupacionInput.addEventListener("focus", () => abrirListaOcupacion());
+  ocupacionInput.addEventListener("input", () => abrirListaOcupacion());
+  ocupacionInput.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      cerrarListaOcupacion();
+      return;
+    }
+    if (event.key === "Enter" && ocupacionOpen) {
+      event.preventDefault();
+      const primerOpcion = ocupacionOptions.querySelector(".custom-select-option");
+      if (primerOpcion && !primerOpcion.textContent.includes("No se encontraron")) {
+        seleccionarOcupacion(primerOpcion.dataset.value);
+      }
+    }
+  });
+  ocupacionToggle.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (ocupacionOpen) {
+      cerrarListaOcupacion();
+    } else {
+      abrirListaOcupacion();
+    }
+  });
+  ocupacionOptions.addEventListener("click", (event) => {
+    const opcion = event.target.closest(".custom-select-option");
+    if (!opcion) return;
+    seleccionarOcupacion(opcion.dataset.value);
+  });
+
+  asesorInput.addEventListener("focus", () => abrirListaAsesor());
+  asesorInput.addEventListener("input", () => abrirListaAsesor());
+  asesorInput.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      cerrarListaAsesor();
+      return;
+    }
+    if (event.key === "Enter" && asesorOpen) {
+      event.preventDefault();
+      const primerOpcion = asesorOptions.querySelector(".custom-select-option");
+      if (primerOpcion && !primerOpcion.textContent.includes("No se encontraron")) {
+        seleccionarAsesor(primerOpcion.dataset.value);
+      }
+    }
+  });
+  asesorToggle.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (asesorOpen) {
+      cerrarListaAsesor();
+    } else {
+      abrirListaAsesor();
+    }
+  });
+  asesorOptions.addEventListener("click", (event) => {
+    const opcion = event.target.closest(".custom-select-option");
+    if (!opcion) return;
+    seleccionarAsesor(opcion.dataset.value);
   });
 
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".custom-select")) {
-      cerrarListaCursos();
+      cerrarTodosLosSelects();
     }
   });
 }
@@ -295,7 +402,7 @@ $("btn-volver").addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
-inicializarCursos();
+inicializarSelects();
 
 $("curso").addEventListener("change", function () {
   actualizarGrupoOtro();
@@ -319,9 +426,6 @@ $("btn-guardar").addEventListener("click", async () => {
     $("success-nombre").textContent = datosEntrevista.nombre;
     $("chip-tel").textContent = "+54 " + datosEntrevista.telefono;
 
-    // Pre-completar asistente con el del formulario
-    $("cita-asistente").value = datosEntrevista.asesor || "";
-
     actualizarPreview();
 
     cardConfirm.classList.add("hidden");
@@ -343,7 +447,7 @@ $("btn-guardar").addEventListener("click", async () => {
 /* ════════════════════════
    PREVIEW EN TIEMPO REAL
 ════════════════════════ */
-["cita-fecha","cita-horario","cita-asistente"].forEach(id => {
+["cita-fecha","cita-horario"].forEach(id => {
   const el = $(id);
   if (!el) return;
   el.addEventListener("change", actualizarPreview);
@@ -353,7 +457,7 @@ $("btn-guardar").addEventListener("click", async () => {
 function actualizarPreview() {
   const fechaVal   = $("cita-fecha") ? $("cita-fecha").value : "";
   const horarioRaw = $("cita-horario").value;   // "19:00"
-  const asistente  = $("cita-asistente").value.trim();
+  const asistente  = datosEntrevista.asesor || "";
 
   if (!fechaVal || !horarioRaw || !asistente) {
     $("wsp-preview").textContent = "Completá todos los campos para ver el mensaje...";
@@ -410,8 +514,7 @@ $("btn-wsp").addEventListener("click", () => {
   // 1. Validaciones
   let ok = true;
   [["cita-fecha","err-cita-fecha","Seleccioná la fecha"],
-   ["cita-horario","err-cita-horario","Ingresá el horario"],
-   ["cita-asistente","err-cita-asistente","Ingresá el asistente"]
+   ["cita-horario","err-cita-horario","Ingresá el horario"]
   ].forEach(([id, errId, msg]) => {
     const el = $(id);
     const val = el ? el.value.trim() : "";
@@ -441,7 +544,7 @@ $("btn-wsp").addEventListener("click", () => {
 /* ── Nueva entrevista ── */
 $("btn-nuevo").addEventListener("click", () => {
   ["nombre","telefono","edad","ocupacion","horario","promocion","asesor","otro-curso",
-   "cita-fecha","cita-horario","cita-asistente"].forEach(id => {
+   "cita-fecha","cita-horario"].forEach(id => {
     const el = $(id); if (el) el.value = "";
   });
   cursoInput.value = "";
