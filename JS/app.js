@@ -14,7 +14,7 @@ const CONFIG = {
 {diaSemana} {dia}/{mes}
 Horario: {hora} hs ⏰
 Dirección: Lavalle 174, casi esquina Rioja, ciudad 📍
-Asistente: {asistente} 🙋‍♀️
+Asesor: {asistente} 🙋‍♀️
 Por favor, confirmá tu asistencia 📝
 ¡Estamos ansiosos por verte! 🤗`,
 };
@@ -89,6 +89,23 @@ function renderSelectOptions(items, filter) {
   return filtrados.map(item => `
       <li class="custom-select-option" data-value="${item}">${item}</li>
     `).join("");
+}
+
+function renderCursos(filter = "") {
+  cursoOptions.innerHTML = renderSelectOptions(CURSOS_INTERES, filter);
+}
+
+function isValidOption(value, items) {
+  if (!value) return false;
+  return items.some(item => item.toLowerCase() === value.trim().toLowerCase());
+}
+
+function isValidOcupacion(value) {
+  return isValidOption(value, OCUPACIONES);
+}
+
+function isValidAsesor(value) {
+  return isValidOption(value, ASESOR_OPTIONS);
 }
 
 function cerrarTodosLosSelects() {
@@ -171,8 +188,8 @@ function inicializarSelects() {
     }
     if (event.key === "Enter" && cursoOpen) {
       event.preventDefault();
-      const primerOpcion = cursoOptions.querySelector(".custom-select-option");
-      if (primerOpcion && !primerOpcion.textContent.includes("No se encontraron")) {
+      const primerOpcion = cursoOptions.querySelector(".custom-select-option[data-value]");
+      if (primerOpcion && primerOpcion.dataset.value) {
         seleccionarCurso(primerOpcion.dataset.value);
       }
     }
@@ -186,7 +203,7 @@ function inicializarSelects() {
     }
   });
   cursoOptions.addEventListener("click", (event) => {
-    const opcion = event.target.closest(".custom-select-option");
+    const opcion = event.target.closest(".custom-select-option[data-value]");
     if (!opcion) return;
     seleccionarCurso(opcion.dataset.value);
   });
@@ -200,8 +217,8 @@ function inicializarSelects() {
     }
     if (event.key === "Enter" && ocupacionOpen) {
       event.preventDefault();
-      const primerOpcion = ocupacionOptions.querySelector(".custom-select-option");
-      if (primerOpcion && !primerOpcion.textContent.includes("No se encontraron")) {
+      const primerOpcion = ocupacionOptions.querySelector(".custom-select-option[data-value]");
+      if (primerOpcion && primerOpcion.dataset.value) {
         seleccionarOcupacion(primerOpcion.dataset.value);
       }
     }
@@ -215,7 +232,7 @@ function inicializarSelects() {
     }
   });
   ocupacionOptions.addEventListener("click", (event) => {
-    const opcion = event.target.closest(".custom-select-option");
+    const opcion = event.target.closest(".custom-select-option[data-value]");
     if (!opcion) return;
     seleccionarOcupacion(opcion.dataset.value);
   });
@@ -229,8 +246,8 @@ function inicializarSelects() {
     }
     if (event.key === "Enter" && asesorOpen) {
       event.preventDefault();
-      const primerOpcion = asesorOptions.querySelector(".custom-select-option");
-      if (primerOpcion && !primerOpcion.textContent.includes("No se encontraron")) {
+      const primerOpcion = asesorOptions.querySelector(".custom-select-option[data-value]");
+      if (primerOpcion && primerOpcion.dataset.value) {
         seleccionarAsesor(primerOpcion.dataset.value);
       }
     }
@@ -244,7 +261,7 @@ function inicializarSelects() {
     }
   });
   asesorOptions.addEventListener("click", (event) => {
-    const opcion = event.target.closest(".custom-select-option");
+    const opcion = event.target.closest(".custom-select-option[data-value]");
     if (!opcion) return;
     seleccionarAsesor(opcion.dataset.value);
   });
@@ -343,12 +360,31 @@ function validarFormulario() {
   if (!nombre || nombre.length < 3) { showError("nombre", "Ingresá el nombre completo."); ok = false; }
   const tel = $("telefono").value.replace(/\D/g,"");
   if (!tel || tel.length < 8 || tel.length > 13) { showError("telefono", "Número inválido. Ej: 2616123456"); ok = false; }
-  const edad = parseInt($("edad").value);
+  const edad = parseInt($("edad").value, 10);
   if (!edad || edad < 14 || edad > 99) { showError("edad", "Ingresá una edad válida."); ok = false; }
-  if (!$("curso").value) { showError("curso", "Seleccioná un curso."); ok = false; }
-  if (!$("ocupacion").value.trim()) { showError("ocupacion", "La ocupación es requerida."); ok = false; }
+  const cursoValor = $("curso").value.trim();
+  if (!cursoValor) {
+    showError("curso", "Seleccioná un curso."); ok = false;
+  } else if (cursoValor !== "Otro" && !isValidOption(cursoValor, CURSOS_INTERES)) {
+    showError("curso", "Seleccioná un curso válido de la lista."); ok = false;
+  }
+  if (cursoValor === "Otro") {
+    const otroCurso = $("otro-curso").value.trim();
+    if (!otroCurso) { showError("otro-curso", "Ingresá el curso que deseas."); ok = false; }
+  }
+  const ocupacionValor = $("ocupacion").value.trim();
+  if (!ocupacionValor) {
+    showError("ocupacion", "La ocupación es requerida."); ok = false;
+  } else if (!isValidOcupacion(ocupacionValor)) {
+    showError("ocupacion", "Seleccioná una ocupación válida de la lista."); ok = false;
+  }
   if (!$("horario").value.trim()) { showError("horario", "El horario es requerido."); ok = false; }
-  if (!$("asesor").value.trim()) { showError("asesor", "El asesor es requerido."); ok = false; }
+  const asesorValor = $("asesor").value.trim();
+  if (!asesorValor) {
+    showError("asesor", "El asesor es requerido."); ok = false;
+  } else if (!isValidAsesor(asesorValor)) {
+    showError("asesor", "Seleccioná un asesor válido de la lista."); ok = false;
+  }
   return ok;
 }
 
