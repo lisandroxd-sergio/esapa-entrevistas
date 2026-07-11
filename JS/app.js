@@ -2,13 +2,133 @@
    ESAPA CRM v2 — app.js
    ============================================= */
 
+/* ════════════════════════════════════════
+   USUARIOS — agregá o quitá acá
+   Contraseñas: cambialas cuando quieras
+════════════════════════════════════════ */
+const USUARIOS = [
+  { nombre: "Martina",  password: "esapa2025",  color: "#2563eb", emoji: "👩‍💼" },
+  { nombre: "Valeria",  password: "valeria123", color: "#7c3aed", emoji: "👩‍💻" },
+  { nombre: "Mely", password: "mely2025",   color: "#059669", emoji: "🧑‍🏫" },
+  { nombre: "Admin",    password: "admin2025",  color: "#0d1f3c", emoji: "🔑" },
+];
+
+/* ════════════════════════════════════════
+   LOGIN
+════════════════════════════════════════ */
+let usuarioActivo = null;
+
+function iniciarLogin() {
+  const loginScreen = document.getElementById("login-screen");
+  const appScreen   = document.getElementById("app-screen");
+
+  // Si ya hay sesión activa, ir directo a la app
+  const sesion = sessionStorage.getItem("esapa_user");
+  if (sesion) {
+    usuarioActivo = JSON.parse(sesion);
+    loginScreen.classList.add("hidden");
+    appScreen.classList.remove("hidden");
+    aplicarUsuario(usuarioActivo);
+    return;
+  }
+
+  // Generar avatares
+  const grid = document.getElementById("user-grid");
+  USUARIOS.forEach(u => {
+    const btn = document.createElement("button");
+    btn.className = "user-avatar-btn";
+    btn.type = "button";
+    btn.dataset.nombre = u.nombre;
+    btn.innerHTML = `
+      <div class="user-avatar-circle" style="background:${u.color}">${u.emoji}</div>
+      <span class="user-avatar-name">${u.nombre}</span>
+    `;
+    btn.addEventListener("click", () => seleccionarUsuario(u, btn));
+    grid.appendChild(btn);
+  });
+
+  // Mostrar/ocultar contraseña
+  document.getElementById("pass-toggle").addEventListener("click", () => {
+    const input = document.getElementById("login-pass");
+    input.type = input.type === "password" ? "text" : "password";
+  });
+
+  // Enter en el campo de contraseña
+  document.getElementById("login-pass").addEventListener("keydown", e => {
+    if (e.key === "Enter") intentarLogin();
+  });
+
+  document.getElementById("btn-login").addEventListener("click", intentarLogin);
+}
+
+function seleccionarUsuario(usuario, btnEl) {
+  // Resaltar avatar seleccionado
+  document.querySelectorAll(".user-avatar-btn").forEach(b => b.classList.remove("selected"));
+  btnEl.classList.add("selected");
+
+  usuarioActivo = usuario;
+
+  // Mostrar campo de contraseña
+  const passGroup = document.getElementById("login-pass-group");
+  passGroup.classList.remove("hidden");
+  document.getElementById("login-user-label").textContent = usuario.nombre;
+  document.getElementById("login-pass").value = "";
+  document.getElementById("login-error").textContent = "";
+  document.getElementById("btn-login").classList.remove("hidden");
+
+  // Foco en contraseña
+  setTimeout(() => document.getElementById("login-pass").focus(), 100);
+}
+
+function intentarLogin() {
+  const pass  = document.getElementById("login-pass").value;
+  const error = document.getElementById("login-error");
+
+  if (!usuarioActivo) return;
+
+  if (pass === usuarioActivo.password) {
+    // Login correcto
+    sessionStorage.setItem("esapa_user", JSON.stringify(usuarioActivo));
+
+    document.getElementById("login-screen").classList.add("hidden");
+    document.getElementById("app-screen").classList.remove("hidden");
+    aplicarUsuario(usuarioActivo);
+  } else {
+    error.textContent = "Contraseña incorrecta. Intentá de nuevo.";
+    document.getElementById("login-pass").classList.add("error");
+    document.getElementById("login-pass").value = "";
+    document.getElementById("login-pass").focus();
+
+    // Animación de error
+    document.getElementById("login-pass").style.animation = "none";
+    setTimeout(() => {
+      document.getElementById("login-pass").style.animation = "";
+    }, 10);
+  }
+}
+
+function aplicarUsuario(usuario) {
+  // Saludo en el header
+  document.getElementById("header-welcome").textContent = `Hola, ${usuario.nombre} 👋`;
+
+  // Pre-completar asesor con el usuario logueado (si está en la lista)
+  if (asesorInput && ASESOR_OPTIONS.includes(usuario.nombre)) {
+    asesorInput.value = usuario.nombre;
+  }
+}
+
+function cerrarSesion() {
+  sessionStorage.removeItem("esapa_user");
+  usuarioActivo = null;
+  location.reload();
+}
+
+/* ════════════════════════
+   CONFIG
+════════════════════════ */
 const CONFIG = {
   GOOGLE_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyg8NkFyH1fuNLWvkHgolz-taE8MAhj5jxLTBPjoAlR4igkewPzyvgW7UHckqvhuuCD/exec",
-
-  // Dirección fija de ESAPA
   DIRECCION: "Lavalle 174, casi esquina Rioja, ciudad 📍",
-
-  // Mensaje — variables: {nombre}, {diaSemana}, {dia}, {mes}, {hora}, {asistente}
   WSP_MENSAJE:
 `CONFIRMACIÓN ENTREVISTA 📆
 {diaSemana} {dia}/{mes}
@@ -26,255 +146,164 @@ let wspWindow = null;
 /* ── Shortcut DOM ── */
 const $ = id => document.getElementById(id);
 
-const cardForm    = $("card-form");
-const cardConfirm = $("card-confirm");
-const cardSuccess = $("card-success");
-const stepDots    = [$("step-dot-1"), $("step-dot-2"), $("step-dot-3")];
-const stepLines   = document.querySelectorAll(".step-line");
-const menuToggle  = $("menu-toggle");
+const cardForm     = $("card-form");
+const cardConfirm  = $("card-confirm");
+const cardSuccess  = $("card-success");
+const stepDots     = [$("step-dot-1"), $("step-dot-2"), $("step-dot-3")];
+const stepLines    = document.querySelectorAll(".step-line");
+const menuToggle   = $("menu-toggle");
 const menuDropdown = $("menu-dropdown");
 
 const CURSOS_INTERES = [
-  "Auxiliar de Farmacia",
-  "Lengua de Señas",
-  "Administrativo de Veterinarias",
-  "Secretariado Médico",
-  "Auxiliar de Acomp. Terapéutico",
-  "Técnico Superior en Farmacia",
-  "Técnico Superior en Sanidad Animal",
-  "Técnico Sup. en Diseño Multimedial",
-  "Instalador de Paneles Solares",
-  "Electricidad Domiciliaria",
-  "Peluquería Canina",
-  "Mecánica de Motos",
-  "Reparación de Celulares",
-  "Inglés Profesional",
-  "Cuidados Infantiles",
-  "Barbería",
-  "Arte y diseño de uñas",
-  "Otro"
+  "Auxiliar de Farmacia","Lengua de Señas","Administrativo de Veterinarias",
+  "Secretariado Médico","Auxiliar de Acomp. Terapéutico","Técnico Superior en Farmacia",
+  "Técnico Superior en Sanidad Animal","Técnico Sup. en Diseño Multimedial",
+  "Instalador de Paneles Solares","Electricidad Domiciliaria","Peluquería Canina",
+  "Mecánica de Motos","Reparación de Celulares","Inglés Profesional",
+  "Cuidados Infantiles","Barbería","Arte y diseño de uñas","Otro"
 ];
 
-const cursoInput = $("curso");
-const cursoToggle = $("curso-toggle");
-const cursoOptions = $("curso-options");
-const ocupacionInput = $("ocupacion");
+const ASESOR_OPTIONS = USUARIOS.map(u => u.nombre);
+const OCUPACIONES    = ["Empleado","Estudiante","Desempleado","Independiente","Freelance","Otro"];
+
+const cursoInput      = $("curso");
+const cursoToggle     = $("curso-toggle");
+const cursoOptions    = $("curso-options");
+const ocupacionInput  = $("ocupacion");
 const ocupacionToggle = $("ocupacion-toggle");
-const ocupacionOptions = $("ocupacion-options");
-const asesorInput = $("asesor");
-const asesorToggle = $("asesor-toggle");
-const asesorOptions = $("asesor-options");
-let cursoOpen = false;
-let ocupacionOpen = false;
-let asesorOpen = false;
+const ocupacionOptions= $("ocupacion-options");
+const asesorInput     = $("asesor");
+const asesorToggle    = $("asesor-toggle");
+const asesorOptions   = $("asesor-options");
 
-const ASESOR_OPTIONS = ["Martina", "Valeria"];
-const OCUPACIONES = ["Empleado", "Estudiante", "Desempleado", "Independiente", "Freelance", "Otro"];
+let cursoOpen = false, ocupacionOpen = false, asesorOpen = false;
 
+/* ════════════════════════
+   SELECTS CUSTOM
+════════════════════════ */
 function actualizarGrupoOtro() {
-  const grupoOtro = $("grupo-otro");
-  if (grupoOtro) {
-    grupoOtro.classList.toggle("hidden", cursoInput.value !== "Otro");
-  }
+  const g = $("grupo-otro");
+  if (g) g.classList.toggle("hidden", cursoInput.value !== "Otro");
 }
 
 function renderSelectOptions(items, filter) {
-  const query = filter.trim().toLowerCase();
-  const filtrados = items.filter(item => item.toLowerCase().includes(query));
-
-  if (filtrados.length === 0) {
-    return '<li class="custom-select-option">No se encontraron opciones</li>';
-  }
-
-  return filtrados.map(item => `
-      <li class="custom-select-option" data-value="${item}">${item}</li>
-    `).join("");
+  const q = filter.trim().toLowerCase();
+  const f = items.filter(i => i.toLowerCase().includes(q));
+  return f.length
+    ? f.map(i => `<li class="custom-select-option" data-value="${i}">${i}</li>`).join("")
+    : '<li class="custom-select-option">No se encontraron opciones</li>';
 }
 
-function renderCursos(filter = "") {
-  cursoOptions.innerHTML = renderSelectOptions(CURSOS_INTERES, filter);
-}
-
-function isValidOption(value, items) {
-  if (!value) return false;
-  return items.some(item => item.toLowerCase() === value.trim().toLowerCase());
-}
-
-function isValidOcupacion(value) {
-  return isValidOption(value, OCUPACIONES);
-}
-
-function isValidAsesor(value) {
-  return isValidOption(value, ASESOR_OPTIONS);
+function isValidOption(val, items) {
+  return items.some(i => i.toLowerCase() === val.trim().toLowerCase());
 }
 
 function cerrarTodosLosSelects() {
-  if (cursoOpen) cerrarListaCursos();
+  if (cursoOpen)    cerrarListaCursos();
   if (ocupacionOpen) cerrarListaOcupacion();
-  if (asesorOpen) cerrarListaAsesor();
+  if (asesorOpen)   cerrarListaAsesor();
 }
 
 function abrirListaCursos() {
   cursoOpen = true;
   cursoOptions.innerHTML = renderSelectOptions(CURSOS_INTERES, cursoInput.value);
-  cursoOptions.classList.toggle("hidden", cursoOptions.children.length === 0);
-  cursoToggle.setAttribute("aria-expanded", String(cursoOpen));
+  cursoOptions.classList.remove("hidden");
 }
-
 function cerrarListaCursos() {
-  cursoOpen = false;
-  cursoOptions.classList.add("hidden");
-  cursoToggle.setAttribute("aria-expanded", "false");
+  cursoOpen = false; cursoOptions.classList.add("hidden");
 }
-
-function seleccionarCurso(curso) {
-  cursoInput.value = curso;
-  actualizarGrupoOtro();
-  cerrarListaCursos();
+function seleccionarCurso(v) {
+  cursoInput.value = v; actualizarGrupoOtro(); cerrarListaCursos();
 }
 
 function abrirListaOcupacion() {
   ocupacionOpen = true;
   ocupacionOptions.innerHTML = renderSelectOptions(OCUPACIONES, ocupacionInput.value);
-  ocupacionOptions.classList.toggle("hidden", ocupacionOptions.children.length === 0);
-  ocupacionToggle.setAttribute("aria-expanded", String(ocupacionOpen));
+  ocupacionOptions.classList.remove("hidden");
 }
-
 function cerrarListaOcupacion() {
-  ocupacionOpen = false;
-  ocupacionOptions.classList.add("hidden");
-  ocupacionToggle.setAttribute("aria-expanded", "false");
+  ocupacionOpen = false; ocupacionOptions.classList.add("hidden");
 }
-
-function seleccionarOcupacion(ocupacion) {
-  ocupacionInput.value = ocupacion;
-  cerrarListaOcupacion();
+function seleccionarOcupacion(v) {
+  ocupacionInput.value = v; cerrarListaOcupacion();
 }
 
 function abrirListaAsesor() {
   asesorOpen = true;
   asesorOptions.innerHTML = renderSelectOptions(ASESOR_OPTIONS, asesorInput.value);
-  asesorOptions.classList.toggle("hidden", asesorOptions.children.length === 0);
-  asesorToggle.setAttribute("aria-expanded", String(asesorOpen));
+  asesorOptions.classList.remove("hidden");
 }
-
 function cerrarListaAsesor() {
-  asesorOpen = false;
-  asesorOptions.classList.add("hidden");
-  asesorToggle.setAttribute("aria-expanded", "false");
+  asesorOpen = false; asesorOptions.classList.add("hidden");
 }
-
-function seleccionarAsesor(asesor) {
-  asesorInput.value = asesor;
-  cerrarListaAsesor();
+function seleccionarAsesor(v) {
+  asesorInput.value = v; cerrarListaAsesor();
 }
 
 function inicializarSelects() {
-  renderCursos("");
-  cerrarListaCursos();
-  cerrarListaOcupacion();
-  cerrarListaAsesor();
-  actualizarGrupoOtro();
+  cerrarListaCursos(); cerrarListaOcupacion(); cerrarListaAsesor(); actualizarGrupoOtro();
 
-  cursoInput.addEventListener("focus", () => abrirListaCursos());
-  cursoInput.addEventListener("input", () => {
-    abrirListaCursos();
-    actualizarGrupoOtro();
-  });
-  cursoInput.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      cerrarListaCursos();
-      return;
-    }
-    if (event.key === "Enter" && cursoOpen) {
-      event.preventDefault();
-      const primerOpcion = cursoOptions.querySelector(".custom-select-option[data-value]");
-      if (primerOpcion && primerOpcion.dataset.value) {
-        seleccionarCurso(primerOpcion.dataset.value);
-      }
+  cursoInput.addEventListener("focus", abrirListaCursos);
+  cursoInput.addEventListener("input", () => { abrirListaCursos(); actualizarGrupoOtro(); });
+  cursoInput.addEventListener("keydown", e => {
+    if (e.key === "Escape") { cerrarListaCursos(); return; }
+    if (e.key === "Enter" && cursoOpen) {
+      e.preventDefault();
+      const p = cursoOptions.querySelector(".custom-select-option[data-value]");
+      if (p) seleccionarCurso(p.dataset.value);
     }
   });
-  cursoToggle.addEventListener("click", (event) => {
-    event.preventDefault();
-    if (cursoOpen) {
-      cerrarListaCursos();
-    } else {
-      abrirListaCursos();
-    }
+  cursoToggle.addEventListener("click", e => {
+    e.preventDefault(); cursoOpen ? cerrarListaCursos() : abrirListaCursos();
   });
-  cursoOptions.addEventListener("click", (event) => {
-    const opcion = event.target.closest(".custom-select-option[data-value]");
-    if (!opcion) return;
-    seleccionarCurso(opcion.dataset.value);
+  cursoOptions.addEventListener("click", e => {
+    const o = e.target.closest(".custom-select-option[data-value]");
+    if (o) seleccionarCurso(o.dataset.value);
   });
 
-  ocupacionInput.addEventListener("focus", () => abrirListaOcupacion());
-  ocupacionInput.addEventListener("input", () => abrirListaOcupacion());
-  ocupacionInput.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      cerrarListaOcupacion();
-      return;
-    }
-    if (event.key === "Enter" && ocupacionOpen) {
-      event.preventDefault();
-      const primerOpcion = ocupacionOptions.querySelector(".custom-select-option[data-value]");
-      if (primerOpcion && primerOpcion.dataset.value) {
-        seleccionarOcupacion(primerOpcion.dataset.value);
-      }
+  ocupacionInput.addEventListener("focus", abrirListaOcupacion);
+  ocupacionInput.addEventListener("input", abrirListaOcupacion);
+  ocupacionInput.addEventListener("keydown", e => {
+    if (e.key === "Escape") { cerrarListaOcupacion(); return; }
+    if (e.key === "Enter" && ocupacionOpen) {
+      e.preventDefault();
+      const p = ocupacionOptions.querySelector(".custom-select-option[data-value]");
+      if (p) seleccionarOcupacion(p.dataset.value);
     }
   });
-  ocupacionToggle.addEventListener("click", (event) => {
-    event.preventDefault();
-    if (ocupacionOpen) {
-      cerrarListaOcupacion();
-    } else {
-      abrirListaOcupacion();
-    }
+  ocupacionToggle.addEventListener("click", e => {
+    e.preventDefault(); ocupacionOpen ? cerrarListaOcupacion() : abrirListaOcupacion();
   });
-  ocupacionOptions.addEventListener("click", (event) => {
-    const opcion = event.target.closest(".custom-select-option[data-value]");
-    if (!opcion) return;
-    seleccionarOcupacion(opcion.dataset.value);
+  ocupacionOptions.addEventListener("click", e => {
+    const o = e.target.closest(".custom-select-option[data-value]");
+    if (o) seleccionarOcupacion(o.dataset.value);
   });
 
-  asesorInput.addEventListener("focus", () => abrirListaAsesor());
-  asesorInput.addEventListener("input", () => abrirListaAsesor());
-  asesorInput.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      cerrarListaAsesor();
-      return;
-    }
-    if (event.key === "Enter" && asesorOpen) {
-      event.preventDefault();
-      const primerOpcion = asesorOptions.querySelector(".custom-select-option[data-value]");
-      if (primerOpcion && primerOpcion.dataset.value) {
-        seleccionarAsesor(primerOpcion.dataset.value);
-      }
+  asesorInput.addEventListener("focus", abrirListaAsesor);
+  asesorInput.addEventListener("input", abrirListaAsesor);
+  asesorInput.addEventListener("keydown", e => {
+    if (e.key === "Escape") { cerrarListaAsesor(); return; }
+    if (e.key === "Enter" && asesorOpen) {
+      e.preventDefault();
+      const p = asesorOptions.querySelector(".custom-select-option[data-value]");
+      if (p) seleccionarAsesor(p.dataset.value);
     }
   });
-  asesorToggle.addEventListener("click", (event) => {
-    event.preventDefault();
-    if (asesorOpen) {
-      cerrarListaAsesor();
-    } else {
-      abrirListaAsesor();
-    }
+  asesorToggle.addEventListener("click", e => {
+    e.preventDefault(); asesorOpen ? cerrarListaAsesor() : abrirListaAsesor();
   });
-  asesorOptions.addEventListener("click", (event) => {
-    const opcion = event.target.closest(".custom-select-option[data-value]");
-    if (!opcion) return;
-    seleccionarAsesor(opcion.dataset.value);
+  asesorOptions.addEventListener("click", e => {
+    const o = e.target.closest(".custom-select-option[data-value]");
+    if (o) seleccionarAsesor(o.dataset.value);
   });
 
-  document.addEventListener("click", (event) => {
-    if (!event.target.closest(".custom-select")) {
-      cerrarTodosLosSelects();
-    }
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".custom-select")) cerrarTodosLosSelects();
   });
 }
 
 /* ════════════════════════
-   MENÚ DESPLEGABLE
+   MENÚ HEADER
 ════════════════════════ */
 function closeMenu() {
   if (!menuDropdown || !menuToggle) return;
@@ -283,28 +312,24 @@ function closeMenu() {
 }
 
 if (menuToggle && menuDropdown) {
-  menuToggle.addEventListener("click", (event) => {
-    event.stopPropagation();
+  menuToggle.addEventListener("click", e => {
+    e.stopPropagation();
     const isOpen = !menuDropdown.classList.contains("hidden");
     menuDropdown.classList.toggle("hidden");
     menuToggle.setAttribute("aria-expanded", String(!isOpen));
   });
 
-  menuDropdown.addEventListener("click", (event) => {
-    const action = event.target.dataset.action;
+  menuDropdown.addEventListener("click", e => {
+    const action = e.target.dataset.action;
     if (!action) return;
-
-    if (action === "new") {
-      $("btn-nuevo").click();
-    } else if (action === "steps") {
-      document.querySelector(".steps-bar").scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
+    if (action === "new")    $("btn-nuevo").click();
+    if (action === "steps")  document.querySelector(".steps-bar").scrollIntoView({ behavior: "smooth" });
+    if (action === "logout") cerrarSesion();
     closeMenu();
   });
 
-  document.addEventListener("click", (event) => {
-    if (!event.target.closest(".header-actions")) closeMenu();
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".header-actions")) closeMenu();
   });
 }
 
@@ -317,74 +342,53 @@ function setStep(n) {
     if (i + 1 < n)   dot.classList.add("done");
     if (i + 1 === n) dot.classList.add("active");
   });
-  stepLines.forEach((line, i) => {
-    line.classList.toggle("done", i + 1 < n);
-  });
+  stepLines.forEach((line, i) => line.classList.toggle("done", i + 1 < n));
 }
 
-/* ── Fecha por calendario: se usará `cita-fecha` (input date) ── */
-// Preseleccionar hoy en el input date si existe
+/* ── Fecha por defecto = hoy ── */
 (function setDefaultFecha() {
   const el = $("cita-fecha");
   if (!el) return;
-  const hoy = new Date();
-  const yyyy = hoy.getFullYear();
-  const mm = String(hoy.getMonth() + 1).padStart(2, "0");
-  const dd = String(hoy.getDate()).padStart(2, "0");
-  el.value = `${yyyy}-${mm}-${dd}`;
+  const h = new Date();
+  el.value = `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,"0")}-${String(h.getDate()).padStart(2,"0")}`;
 })();
 
 /* ════════════════════════
-   VALIDACIÓN PASO 1
+   VALIDACIÓN
 ════════════════════════ */
 const CAMPOS_REQ = ["nombre","telefono","edad","curso","ocupacion","horario","asesor"];
 
 function clearErrors() {
   CAMPOS_REQ.forEach(id => {
     const e = $(`err-${id}`); const i = $(id);
-    if (e) e.textContent = "";
-    if (i) i.classList.remove("error");
+    if (e) e.textContent = ""; if (i) i.classList.remove("error");
   });
 }
 
 function showError(campo, msg) {
   const e = $(`err-${campo}`); const i = $(campo);
-  if (e) e.textContent = msg;
-  if (i) i.classList.add("error");
+  if (e) e.textContent = msg; if (i) i.classList.add("error");
 }
 
 function validarFormulario() {
-  clearErrors();
-  let ok = true;
+  clearErrors(); let ok = true;
   const nombre = $("nombre").value.trim();
   if (!nombre || nombre.length < 3) { showError("nombre", "Ingresá el nombre completo."); ok = false; }
   const tel = $("telefono").value.replace(/\D/g,"");
-  if (!tel || tel.length < 8 || tel.length > 13) { showError("telefono", "Número inválido. Ej: 2616123456"); ok = false; }
+  if (!tel || tel.length < 8 || tel.length > 13) { showError("telefono", "Número inválido."); ok = false; }
   const edad = parseInt($("edad").value, 10);
   if (!edad || edad < 14 || edad > 99) { showError("edad", "Ingresá una edad válida."); ok = false; }
-  const cursoValor = $("curso").value.trim();
-  if (!cursoValor) {
-    showError("curso", "Seleccioná un curso."); ok = false;
-  } else if (cursoValor !== "Otro" && !isValidOption(cursoValor, CURSOS_INTERES)) {
-    showError("curso", "Seleccioná un curso válido de la lista."); ok = false;
-  }
-  if (cursoValor === "Otro") {
-    const otroCurso = $("otro-curso").value.trim();
-    if (!otroCurso) { showError("otro-curso", "Ingresá el curso que deseas."); ok = false; }
-  }
-  const ocupacionValor = $("ocupacion").value.trim();
-  if (!ocupacionValor) {
-    showError("ocupacion", "La ocupación es requerida."); ok = false;
-  } else if (!isValidOcupacion(ocupacionValor)) {
-    showError("ocupacion", "Seleccioná una ocupación válida de la lista."); ok = false;
-  }
+  const cursoVal = $("curso").value.trim();
+  if (!cursoVal) { showError("curso", "Seleccioná un curso."); ok = false; }
+  else if (cursoVal !== "Otro" && !isValidOption(cursoVal, CURSOS_INTERES)) { showError("curso", "Seleccioná un curso válido."); ok = false; }
+  if (cursoVal === "Otro" && !$("otro-curso").value.trim()) { showError("otro-curso", "Ingresá el curso."); ok = false; }
+  const ocVal = $("ocupacion").value.trim();
+  if (!ocVal) { showError("ocupacion", "La ocupación es requerida."); ok = false; }
+  else if (!isValidOption(ocVal, OCUPACIONES)) { showError("ocupacion", "Seleccioná una ocupación válida."); ok = false; }
   if (!$("horario").value.trim()) { showError("horario", "El horario es requerido."); ok = false; }
-  const asesorValor = $("asesor").value.trim();
-  if (!asesorValor) {
-    showError("asesor", "El asesor es requerido."); ok = false;
-  } else if (!isValidAsesor(asesorValor)) {
-    showError("asesor", "Seleccioná un asesor válido de la lista."); ok = false;
-  }
+  const asesorVal = $("asesor").value.trim();
+  if (!asesorVal) { showError("asesor", "El asesor es requerido."); ok = false; }
+  else if (!isValidOption(asesorVal, ASESOR_OPTIONS)) { showError("asesor", "Seleccioná un asesor válido."); ok = false; }
   return ok;
 }
 
@@ -440,43 +444,28 @@ $("btn-volver").addEventListener("click", () => {
 
 inicializarSelects();
 
-$("curso").addEventListener("change", function () {
-  actualizarGrupoOtro();
-});
-
 /* ════════════════════════
    PASO 2 → 3
 ════════════════════════ */
 $("btn-guardar").addEventListener("click", async () => {
-  const btn   = $("btn-guardar");
-  const texto = $("btn-guardar-text");
-  const spin  = $("spinner");
-  btn.disabled = true;
-  texto.textContent = "Guardando...";
-  spin.classList.remove("hidden");
+  const btn = $("btn-guardar"), texto = $("btn-guardar-text"), spin = $("spinner");
+  btn.disabled = true; texto.textContent = "Guardando..."; spin.classList.remove("hidden");
 
   try {
     await enviarASheets(datosEntrevista);
-
-    // Chip del candidato
     $("success-nombre").textContent = datosEntrevista.nombre;
     $("chip-tel").textContent = "+54 " + datosEntrevista.telefono;
-
     actualizarPreview();
-
     cardConfirm.classList.add("hidden");
     cardSuccess.classList.remove("hidden");
     setStep(3);
     window.scrollTo({ top: 0, behavior: "smooth" });
     showToast("✅ Entrevista registrada. Completá la cita para contactar.", "success");
-
   } catch (err) {
     showToast("⚠️ Error al guardar. Verificá la conexión.", "error");
     console.error(err);
   } finally {
-    btn.disabled = false;
-    texto.textContent = "Guardar y contactar";
-    spin.classList.add("hidden");
+    btn.disabled = false; texto.textContent = "Guardar y contactar"; spin.classList.add("hidden");
   }
 });
 
@@ -484,15 +473,14 @@ $("btn-guardar").addEventListener("click", async () => {
    PREVIEW EN TIEMPO REAL
 ════════════════════════ */
 ["cita-fecha","cita-horario"].forEach(id => {
-  const el = $(id);
-  if (!el) return;
+  const el = $(id); if (!el) return;
   el.addEventListener("change", actualizarPreview);
   el.addEventListener("input",  actualizarPreview);
 });
 
 function actualizarPreview() {
-  const fechaVal   = $("cita-fecha") ? $("cita-fecha").value : "";
-  const horarioRaw = $("cita-horario").value;   // "19:00"
+  const fechaVal   = $("cita-fecha")   ? $("cita-fecha").value   : "";
+  const horarioRaw = $("cita-horario") ? $("cita-horario").value : "";
   const asistente  = datosEntrevista.asesor || "";
 
   if (!fechaVal || !horarioRaw || !asistente) {
@@ -500,103 +488,64 @@ function actualizarPreview() {
     return;
   }
 
-  // fechaVal formato YYYY-MM-DD
   const [anioStr, mesStr, diaStr] = fechaVal.split("-");
-  const anio = parseInt(anioStr, 10);
-  const mesNum = parseInt(mesStr, 10);
-  const dia = String(parseInt(diaStr, 10)).padStart(2, "0");
-  const fecha = new Date(anio, mesNum - 1, parseInt(diaStr, 10));
-  const diasSemana = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-  const diaSemana  = diasSemana[fecha.getDay()];
-
-  // Formatear hora a "19:00"
-  const [h, m] = horarioRaw.split(":");
-  const horaFmt = `${h}:${m}`;
-
+  const dia     = String(parseInt(diaStr, 10)).padStart(2, "0");
+  const mesNum  = parseInt(mesStr, 10);
+  const fecha   = new Date(parseInt(anioStr), mesNum - 1, parseInt(diaStr));
+  const dias    = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  const diaSem  = dias[fecha.getDay()];
+  const [h, m]  = horarioRaw.split(":");
   const mesNum2 = String(mesNum).padStart(2, "0");
 
   const mensaje = CONFIG.WSP_MENSAJE
-    .replace("{nombre}",    datosEntrevista.nombre || "")
-    .replace("{diaSemana}", diaSemana)
+    .replace("{diaSemana}", diaSem)
     .replace("{dia}",       dia)
     .replace("{mes}",       mesNum2)
-    .replace("{hora}",      horaFmt)
+    .replace("{hora}",      `${h}:${m}`)
     .replace("{asistente}", asistente);
 
   $("wsp-preview").textContent = mensaje;
 }
 
-/* ════════════════════════════════════════════
-   WHATSAPP — PESTAÑA ÚNICA REUTILIZABLE
-   Se reutiliza la misma ventana de WhatsApp Web.
-   Si la ventana ya existe, se actualiza la URL.
-   Si se cerró, se vuelve a abrir.
-════════════════════════════════════════════ */
-function abrirWhatsApp(url) {
-  // 1. Delegamos el control al navegador usando el nombre "esapa_wsp"
-  // Esto fuerza a que recicle siempre la misma pestaña en lugar de abrir nuevas
-  wspWindow = window.open(url, "esapa_wsp");
-
-  // 2. Mantenemos tu validación por si el navegador bloquea los pop-ups
-  if (!wspWindow || wspWindow.closed || typeof wspWindow.closed === "undefined") {
-    showToast("⚠️ Permití las ventanas emergentes para usar la misma pestaña de WhatsApp.", "error");
-  } else {
-    // Si todo sale bien, hace que la pestaña de WhatsApp parpadee o pase al frente
-    wspWindow.focus();
-  }
-}
-
+/* ════════════════════════
+   WHATSAPP
+════════════════════════ */
 $("btn-wsp").addEventListener("click", () => {
-  // 1. Validaciones
   let ok = true;
   [["cita-fecha","err-cita-fecha","Seleccioná la fecha"],
    ["cita-horario","err-cita-horario","Ingresá el horario"]
   ].forEach(([id, errId, msg]) => {
-    const el = $(id);
-    const val = el ? el.value.trim() : "";
-    const err = $(errId);
-    if (!val) {
-      if (err) err.textContent = msg;
-      if (el) el.classList.add("error");
-      ok = false;
-    } else {
-      if (err) err.textContent = "";
-      if (el) el.classList.remove("error");
-    }
+    const el = $(id), err = $(errId), val = el ? el.value.trim() : "";
+    if (!val) { if (err) err.textContent = msg; if (el) el.classList.add("error"); ok = false; }
+    else      { if (err) err.textContent = ""; if (el) el.classList.remove("error"); }
   });
   if (!ok) { showToast("Completá todos los campos de la cita.", "error"); return; }
 
-  // 2. Armamos el mensaje y el teléfono
   const mensaje = $("wsp-preview").textContent;
   const tel     = "54" + datosEntrevista.telefono;
-
-  // 3. EL CAMBIO MAGICO: Usamos whatsapp:// en lugar de https://
-  const url = `whatsapp://send?phone=${tel}&text=${encodeURIComponent(mensaje)}`;
-  
-  // 4. Redirigimos la orden sin abrir pestañas nuevas
+  const url     = `whatsapp://send?phone=${tel}&text=${encodeURIComponent(mensaje)}`;
   window.location.href = url;
 });
 
 /* ── Nueva entrevista ── */
 $("btn-nuevo").addEventListener("click", () => {
   ["nombre","telefono","edad","ocupacion","horario","promocion","asesor","otro-curso",
-   "cita-fecha","cita-horario"].forEach(id => {
-    const el = $(id); if (el) el.value = "";
-  });
+   "cita-fecha","cita-horario"].forEach(id => { const el=$(id); if(el) el.value=""; });
   cursoInput.value = "";
-  actualizarGrupoOtro();
-  renderCursos("");
-  cerrarListaCursos();
+  actualizarGrupoOtro(); cerrarListaCursos();
   $("wsp-preview").textContent = "Completá los campos para ver el mensaje...";
   clearErrors();
   datosEntrevista = {};
 
+  // Restaurar asesor al usuario logueado
+  if (usuarioActivo && ASESOR_OPTIONS.includes(usuarioActivo.nombre)) {
+    asesorInput.value = usuarioActivo.nombre;
+  }
+
   // Resetear fecha a hoy
-  const hoy = new Date();
-  const yyyy = hoy.getFullYear();
-  const mm = String(hoy.getMonth() + 1).padStart(2, "0");
-  const dd = String(hoy.getDate()).padStart(2, "0");
-  if ($("cita-fecha")) $("cita-fecha").value = `${yyyy}-${mm}-${dd}`;
+  const h = new Date();
+  if ($("cita-fecha")) $("cita-fecha").value =
+    `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,"0")}-${String(h.getDate()).padStart(2,"0")}`;
 
   cardSuccess.classList.add("hidden");
   cardForm.classList.remove("hidden");
@@ -609,17 +558,13 @@ $("btn-nuevo").addEventListener("click", () => {
 ════════════════════════ */
 async function enviarASheets(datos) {
   if (CONFIG.GOOGLE_SCRIPT_URL.includes("TU_URL_AQUI")) {
-    console.warn("⚠️ MODO DEMO");
-    await new Promise(r => setTimeout(r, 900));
-    return { demo: true };
+    await new Promise(r => setTimeout(r, 900)); return { demo: true };
   }
   const params = new URLSearchParams();
   Object.entries(datos).forEach(([k,v]) => params.append(k,v));
   await fetch(CONFIG.GOOGLE_SCRIPT_URL, { method:"POST", mode:"no-cors", body: params });
   return { ok: true };
 }
-
-/* Chatbot removed */
 
 /* ════════════════════════
    UTILIDADES
@@ -634,3 +579,6 @@ function showToast(msg, tipo = "") {
 
 $("year").textContent = new Date().getFullYear();
 setStep(1);
+
+/* ── Arrancar login al cargar ── */
+iniciarLogin();
